@@ -8,7 +8,7 @@ Du hjälper mig bygga ett **backupsystem för bilder** i repot https://github.co
 - Kunna jämföra källa mot backup och rapportera skillnader (saknas, ändrad, extra, identisk).
 
 ## Teknikstack
-- Java 21 (använd moderna språkfunktioner, se nedan), Spring Boot, Maven.
+- Java 25 (använd moderna språkfunktioner, se nedan), Spring Boot 4, Maven.
 - Tester: JUnit 5, AssertJ, Mockito endast där det behövs. Använd `@TempDir` för filsystemstester.
 - Kodtäckning: JaCoCo, med krav på minst 90 % rad- och branch-täckning i `mvn verify`.
 

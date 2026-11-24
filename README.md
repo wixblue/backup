@@ -6,8 +6,8 @@ Ska ge stöd för att kunna jämföra filer från destination till backup.
 
 ## Teknikstack
 
-- Java 21
-- Spring Boot
+- Java 25
+- Spring Boot 4
 - Maven
 
 ## Kom igång
