@@ -61,6 +61,26 @@ Jämförelsen ändrar ingenting och ger en status per fil (`status`):
 
 Felaktiga indata, till exempel en mapp som inte finns, ger `400` med förklaring i `detail`.
 
+### Backupprojekt
+
+Ett projekt har namn, beskrivning (valfri), bildmapp (`source`) och backupmapp (`destination`). Projekten sparas i en lokal H2-databas i filen `data/backup.mv.db` (mappen `data/` ignoreras av git).
+
+| Metod | Sökväg | Gör |
+|-------|--------|-----|
+| `GET` | `/api/projects` | Listar projekt sorterade på namn |
+| `GET` | `/api/projects/{id}` | Hämtar ett projekt (`404` om det saknas) |
+| `POST` | `/api/projects` | Skapar ett projekt (`201`) |
+| `PUT` | `/api/projects/{id}` | Ändrar ett projekt |
+| `DELETE` | `/api/projects/{id}` | Tar bort ett projekt (`204`) |
+
+```
+curl -X POST http://127.0.0.1:8080/api/projects \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Semester", "description": "Bilder 2026", "source": "/sökväg/till/bilder", "destination": "/sökväg/till/backup"}'
+```
+
+Backupmappen får inte ligga i bildmappen. Mapparna behöver inte finnas när projektet sparas, de kontrolleras först när backup eller jämförelse körs.
+
 ## Arbetssätt
 
 - Ingen kod pushas direkt till `main`. Allt går via pull requests.

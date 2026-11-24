@@ -26,6 +26,9 @@ replay_pid*
 # Maven
 target/
 
+# Lokal databas (H2)
+data/
+
 # IDE
 .idea/
 *.iml
