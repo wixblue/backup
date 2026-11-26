@@ -6,6 +6,8 @@ import java.util.List;
 /**
  * Sammanfattning av en jämförelse mellan källmapp och backup.
  *
+ * @param notBackedUp    antal filer som inte är säkerhetskopierade: de som saknas i backupen
+ *                       ({@code onlyInSource}) plus de vars innehåll skiljer sig ({@code different})
  * @param backupUpToDate true om inga filer skiljer sig och inga filer saknas i backupen.
  *                       Filer som bara finns i backupen räknas inte som att backupen är inaktuell.
  */
@@ -16,12 +18,14 @@ public record ComparisonResult(
         int different,
         int onlyInSource,
         int onlyInBackup,
+        int notBackedUp,
         boolean backupUpToDate,
         List<ComparisonEntry> entries) {
 
     public static ComparisonResult of(Path source, Path backup, List<ComparisonEntry> entries) {
         int different = count(entries, ComparisonStatus.DIFFERENT);
         int onlyInSource = count(entries, ComparisonStatus.ONLY_IN_SOURCE);
+        int notBackedUp = different + onlyInSource;
         return new ComparisonResult(
                 source.toString(),
                 backup.toString(),
@@ -29,7 +33,8 @@ public record ComparisonResult(
                 different,
                 onlyInSource,
                 count(entries, ComparisonStatus.ONLY_IN_BACKUP),
-                different == 0 && onlyInSource == 0,
+                notBackedUp,
+                notBackedUp == 0,
                 List.copyOf(entries));
     }
 

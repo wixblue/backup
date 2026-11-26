@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.wixblue.backup.TestFiles;
 import com.wixblue.backup.model.BackupAction;
+import com.wixblue.backup.model.BackupMode;
 import com.wixblue.backup.model.BackupResult;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -62,7 +63,7 @@ class BackupServiceTest {
         service.backup(source, destination);
         TestFiles.write(source.resolve("a.txt"), "version 2, något längre");
 
-        BackupResult result = service.backup(source, destination);
+        BackupResult result = service.backup(source, destination, BackupMode.ADD_AND_UPDATE);
 
         assertThat(result.updated()).isEqualTo(1);
         assertThat(result.entries().get(0).action()).isEqualTo(BackupAction.UPDATED);
@@ -75,7 +76,7 @@ class BackupServiceTest {
         service.backup(source, destination);
         TestFiles.write(source.resolve("a.txt"), "bbbb");
 
-        BackupResult result = service.backup(source, destination);
+        BackupResult result = service.backup(source, destination, BackupMode.ADD_AND_UPDATE);
 
         assertThat(result.updated()).isEqualTo(1);
         assertThat(destination.resolve("a.txt")).hasContent("bbbb");
@@ -91,6 +92,56 @@ class BackupServiceTest {
 
         assertThat(result.copied()).isEqualTo(1);
         assertThat(result.skipped()).isEqualTo(1);
+    }
+
+    @Test
+    void addMissingLeavesChangedFilesUntouched() throws IOException {
+        TestFiles.write(source.resolve("a.txt"), "version 1");
+        service.backup(source, destination);
+        TestFiles.write(source.resolve("a.txt"), "version 2, något längre");
+        TestFiles.write(source.resolve("b.txt"), "ny fil");
+
+        BackupResult result = service.backup(source, destination, BackupMode.ADD_MISSING);
+
+        assertThat(result.copied()).isEqualTo(1);
+        assertThat(result.notUpdated()).isEqualTo(1);
+        assertThat(result.updated()).isZero();
+        assertThat(result.entries().get(0).action()).isEqualTo(BackupAction.NOT_UPDATED);
+        assertThat(destination.resolve("a.txt")).hasContent("version 1");
+        assertThat(destination.resolve("b.txt")).hasContent("ny fil");
+    }
+
+    @Test
+    void defaultsToAddingOnlyMissingFiles() throws IOException {
+        TestFiles.write(source.resolve("a.txt"), "version 1");
+        service.backup(source, destination);
+        TestFiles.write(source.resolve("a.txt"), "version 2, något längre");
+
+        BackupResult result = service.backup(source, destination);
+
+        assertThat(result.mode()).isEqualTo(BackupMode.ADD_MISSING);
+        assertThat(result.notUpdated()).isEqualTo(1);
+        assertThat(destination.resolve("a.txt")).hasContent("version 1");
+    }
+
+    @Test
+    void addMissingStillSkipsIdenticalFiles() throws IOException {
+        TestFiles.write(source.resolve("a.txt"), "alpha");
+        service.backup(source, destination);
+
+        BackupResult result = service.backup(source, destination, BackupMode.ADD_MISSING);
+
+        assertThat(result.skipped()).isEqualTo(1);
+        assertThat(result.notUpdated()).isZero();
+    }
+
+    @Test
+    void resultReportsTheModeThatWasUsed() throws IOException {
+        TestFiles.write(source.resolve("a.txt"), "alpha");
+
+        BackupResult result = service.backup(source, destination, BackupMode.ADD_AND_UPDATE);
+
+        assertThat(result.mode()).isEqualTo(BackupMode.ADD_AND_UPDATE);
     }
 
     @Test
