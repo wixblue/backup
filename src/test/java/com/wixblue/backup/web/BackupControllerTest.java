@@ -49,6 +49,55 @@ class BackupControllerTest {
     }
 
     @Test
+    void backupEndpointOnlyAddsMissingFilesWhenModeIsOmitted() throws Exception {
+        Path source = Files.createDirectory(temp.resolve("source"));
+        Path destination = Files.createDirectory(temp.resolve("backup"));
+        TestFiles.write(source.resolve("a.txt"), "ny version, längre");
+        TestFiles.write(destination.resolve("a.txt"), "gammal");
+
+        mockMvc.perform(post("/api/backup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("source", source, "destination", destination)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mode").value("ADD_MISSING"))
+                .andExpect(jsonPath("$.notUpdated").value(1))
+                .andExpect(jsonPath("$.entries[0].action").value("NOT_UPDATED"));
+
+        assertThat(destination.resolve("a.txt")).hasContent("gammal");
+    }
+
+    @Test
+    void backupEndpointUpdatesChangedFilesWhenModeIsAddAndUpdate() throws Exception {
+        Path source = Files.createDirectory(temp.resolve("source"));
+        Path destination = Files.createDirectory(temp.resolve("backup"));
+        TestFiles.write(source.resolve("a.txt"), "ny version, längre");
+        TestFiles.write(destination.resolve("a.txt"), "gammal");
+
+        mockMvc.perform(post("/api/backup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "source", source.toString(),
+                                "destination", destination.toString(),
+                                "mode", "ADD_AND_UPDATE"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mode").value("ADD_AND_UPDATE"))
+                .andExpect(jsonPath("$.updated").value(1));
+
+        assertThat(destination.resolve("a.txt")).hasContent("ny version, längre");
+    }
+
+    @Test
+    void unknownModeGivesBadRequest() throws Exception {
+        mockMvc.perform(post("/api/backup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "source", temp.toString(),
+                                "destination", temp.resolve("backup").toString(),
+                                "mode", "OVERWRITE_EVERYTHING"))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void compareEndpointReportsDifferences() throws Exception {
         Path source = Files.createDirectory(temp.resolve("source"));
         Path backup = Files.createDirectory(temp.resolve("backup"));
@@ -60,6 +109,7 @@ class BackupControllerTest {
                         .content(json("source", source, "backup", backup)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.different").value(1))
+                .andExpect(jsonPath("$.notBackedUp").value(1))
                 .andExpect(jsonPath("$.backupUpToDate").value(false))
                 .andExpect(jsonPath("$.entries[0].status").value("DIFFERENT"));
     }

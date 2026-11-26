@@ -2,6 +2,7 @@ package com.wixblue.backup.service;
 
 import com.wixblue.backup.model.BackupAction;
 import com.wixblue.backup.model.BackupEntry;
+import com.wixblue.backup.model.BackupMode;
 import com.wixblue.backup.model.BackupResult;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -19,7 +20,8 @@ import org.springframework.stereotype.Service;
  *
  * <ul>
  *   <li>Filer som saknas i backupen kopieras.</li>
- *   <li>Filer vars innehåll skiljer sig från backupens version skrivs över.</li>
+ *   <li>Filer vars innehåll skiljer sig från backupens version skrivs över, men bara i läget
+ *       {@link BackupMode#ADD_AND_UPDATE}. I {@link BackupMode#ADD_MISSING} lämnas de orörda.</li>
  *   <li>Filer som redan finns med samma innehåll hoppas över.</li>
  *   <li>Filer som bara finns i backupen lämnas orörda.</li>
  * </ul>
@@ -27,7 +29,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class BackupService {
 
+    /** Lägger bara till filer som saknas i backupen. */
     public BackupResult backup(Path source, Path destination) {
+        return backup(source, destination, BackupMode.ADD_MISSING);
+    }
+
+    public BackupResult backup(Path source, Path destination, BackupMode mode) {
         try {
             Path sourceDir = FileSupport.requireDirectory(source, "Källmappen");
             Path destinationDir = FileSupport.resolveReal(destination);
@@ -36,9 +43,9 @@ public class BackupService {
 
             List<BackupEntry> entries = new ArrayList<>();
             for (Map.Entry<String, Path> file : FileSupport.listFiles(sourceDir).entrySet()) {
-                entries.add(backupFile(file.getKey(), file.getValue(), destinationDir.resolve(file.getKey())));
+                entries.add(backupFile(file.getKey(), file.getValue(), destinationDir.resolve(file.getKey()), mode));
             }
-            return BackupResult.of(sourceDir, destinationDir, entries);
+            return BackupResult.of(sourceDir, destinationDir, mode, entries);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -54,7 +61,7 @@ public class BackupService {
         }
     }
 
-    private static BackupEntry backupFile(String relativePath, Path source, Path target) {
+    private static BackupEntry backupFile(String relativePath, Path source, Path target, BackupMode mode) {
         try {
             boolean exists = Files.exists(target, LinkOption.NOFOLLOW_LINKS);
             if (exists) {
@@ -64,6 +71,9 @@ public class BackupService {
                 }
                 if (FileSupport.sameContent(source, target)) {
                     return new BackupEntry(relativePath, BackupAction.SKIPPED, null);
+                }
+                if (mode == BackupMode.ADD_MISSING) {
+                    return new BackupEntry(relativePath, BackupAction.NOT_UPDATED, null);
                 }
             }
             Files.createDirectories(target.getParent());

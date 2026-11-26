@@ -7,18 +7,22 @@ import java.util.List;
 public record BackupResult(
         String source,
         String destination,
+        BackupMode mode,
         int copied,
         int updated,
+        int notUpdated,
         int skipped,
         int failed,
         List<BackupEntry> entries) {
 
-    public static BackupResult of(Path source, Path destination, List<BackupEntry> entries) {
+    public static BackupResult of(Path source, Path destination, BackupMode mode, List<BackupEntry> entries) {
         return new BackupResult(
                 source.toString(),
                 destination.toString(),
+                mode,
                 count(entries, BackupAction.COPIED),
                 count(entries, BackupAction.UPDATED),
+                count(entries, BackupAction.NOT_UPDATED),
                 count(entries, BackupAction.SKIPPED),
                 count(entries, BackupAction.FAILED),
                 List.copyOf(entries));

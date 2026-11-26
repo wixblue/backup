@@ -50,7 +50,35 @@ class FileComparisonServiceTest {
         assertThat(result.different()).isEqualTo(1);
         assertThat(result.onlyInSource()).isEqualTo(1);
         assertThat(result.onlyInBackup()).isEqualTo(1);
+        assertThat(result.notBackedUp()).isEqualTo(2);
         assertThat(result.backupUpToDate()).isFalse();
+    }
+
+    @Test
+    void notBackedUpCountsMissingAndChangedFilesButNotExtraOnes() throws IOException {
+        TestFiles.write(source.resolve("missing1.txt"), "a");
+        TestFiles.write(source.resolve("missing2.txt"), "b");
+        TestFiles.write(source.resolve("changed.txt"), "1");
+        TestFiles.write(backup.resolve("changed.txt"), "2");
+        TestFiles.write(source.resolve("same.txt"), "x");
+        TestFiles.write(backup.resolve("same.txt"), "x");
+        TestFiles.write(backup.resolve("extra.txt"), "e");
+
+        ComparisonResult result = service.compare(source, backup);
+
+        assertThat(result.notBackedUp()).isEqualTo(3);
+    }
+
+    @Test
+    void notBackedUpIsZeroWhenEverythingIsBackedUp() throws IOException {
+        TestFiles.write(source.resolve("a.txt"), "x");
+        TestFiles.write(backup.resolve("a.txt"), "x");
+        TestFiles.write(backup.resolve("extra.txt"), "e");
+
+        ComparisonResult result = service.compare(source, backup);
+
+        assertThat(result.notBackedUp()).isZero();
+        assertThat(result.backupUpToDate()).isTrue();
     }
 
     @Test

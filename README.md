@@ -28,15 +28,21 @@ Applikationen exponerar ett litet REST-API på `http://127.0.0.1:8080`. Det bind
 ```
 curl -X POST http://127.0.0.1:8080/api/backup \
   -H "Content-Type: application/json" \
-  -d '{"source": "/sökväg/till/källa", "destination": "/sökväg/till/backup"}'
+  -d '{"source": "/sökväg/till/källa", "destination": "/sökväg/till/backup", "mode": "ADD_MISSING"}'
 ```
+
+`mode` styr hur filer som redan finns i backupen behandlas. Utelämnas den används `ADD_MISSING`.
+
+- `ADD_MISSING` – bara filer som saknas i backupen läggs till. Ändrade filer lämnas orörda.
+- `ADD_AND_UPDATE` – saknade filer läggs till och ändrade filer skrivs över med den nya versionen.
 
 Backupen går igenom källmappen rekursivt och för varje fil gäller:
 
 | Läge | Resultat (`action`) |
 |------|---------------------|
 | Filen finns inte i backupen | `COPIED` – filen kopieras |
-| Filen finns men innehållet skiljer sig | `UPDATED` – filen skrivs över med den nya versionen |
+| Filen finns men innehållet skiljer sig, läge `ADD_AND_UPDATE` | `UPDATED` – filen skrivs över med den nya versionen |
+| Filen finns men innehållet skiljer sig, läge `ADD_MISSING` | `NOT_UPDATED` – inget görs, backupens version behålls |
 | Filen finns med samma innehåll | `SKIPPED` – inget görs |
 | Filen kunde inte kopieras | `FAILED` – anledningen står i `message`, övriga filer påverkas inte |
 
@@ -57,7 +63,9 @@ Jämförelsen ändrar ingenting och ger en status per fil (`status`):
 - `ONLY_IN_SOURCE` – finns bara i källan, alltså inte säkerhetskopierad ännu
 - `ONLY_IN_BACKUP` – finns bara i backupen, till exempel borttagen från källan
 
-`backupUpToDate` är `true` när inga filer skiljer sig och inga filer saknas i backupen. Filer som bara finns i backupen påverkar inte det värdet.
+`notBackedUp` är antalet filer som inte är säkerhetskopierade: filer som saknas i backupen (`onlyInSource`) plus filer vars innehåll skiljer sig (`different`). `backupUpToDate` är `true` när `notBackedUp` är `0`. Filer som bara finns i backupen påverkar inte det värdet.
+
+Vill du backa upp efter jämförelsen anropar du `/api/backup` med samma mappar. Vill du bara lägga till saknade filer använder du läget `ADD_MISSING`.
 
 Felaktiga indata, till exempel en mapp som inte finns, ger `400` med förklaring i `detail`.
 

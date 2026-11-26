@@ -6,6 +6,8 @@ public enum BackupAction {
     COPIED,
     /** Filen fanns i backupen men med annat innehåll och har skrivits över. */
     UPDATED,
+    /** Filen fanns i backupen men med annat innehåll. Den skrevs inte över eftersom läget bara lägger till saknade filer. */
+    NOT_UPDATED,
     /** Filen fanns redan i backupen med samma innehåll. */
     SKIPPED,
     /** Filen kunde inte kopieras. */

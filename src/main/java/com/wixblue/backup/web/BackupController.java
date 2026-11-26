@@ -23,10 +23,11 @@ public class BackupController {
         this.comparisonService = comparisonService;
     }
 
-    /** Kopierar nya och ändrade filer från källmappen till backupmappen. */
+    /** Kopierar filer från källmappen till backupmappen. Läget bestämmer om ändrade filer också skrivs över. */
     @PostMapping("/backup")
     public BackupResult backup(@Valid @RequestBody BackupRequest request) {
-        return backupService.backup(Path.of(request.source()), Path.of(request.destination()));
+        return backupService.backup(
+                Path.of(request.source()), Path.of(request.destination()), request.modeOrDefault());
     }
 
     /** Jämför källmappen med backupmappen utan att ändra något. */
