@@ -48,6 +48,20 @@ Backupen går igenom källmappen rekursivt och för varje fil gäller:
 
 Innehållet jämförs byte för byte, så en ändring upptäcks även om filstorleken är oförändrad. Filer som bara finns i backupen tas inte bort. Symlänkar hoppas över. Backupmålet får inte ligga i källmappen.
 
+### Stäng av och slå på backup
+
+Backup kan stängas av. Då nekas `/api/backup` med `409` tills den slås på igen. Jämförelse fungerar som vanligt.
+
+```
+curl http://127.0.0.1:8080/api/backup/enabled
+
+curl -X PUT http://127.0.0.1:8080/api/backup/enabled \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+```
+
+Startläget styrs av `backup.enabled` i `application.properties` (standard `true`). Läget sparas bara i minnet, så efter en omstart gäller startläget igen.
+
 ### Jämför källa mot backup
 
 ```

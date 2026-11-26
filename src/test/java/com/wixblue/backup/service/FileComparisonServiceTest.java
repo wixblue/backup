@@ -106,7 +106,7 @@ class FileComparisonServiceTest {
     void backupIsUpToDateAfterRunningBackup() throws IOException {
         TestFiles.write(source.resolve("a.txt"), "alpha");
         TestFiles.write(source.resolve("sub/b.txt"), "beta");
-        new BackupService().backup(source, backup);
+        new BackupService(new BackupSwitch(true)).backup(source, backup);
 
         ComparisonResult result = service.compare(source, backup);
 

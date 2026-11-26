@@ -16,7 +16,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 class BackupServiceTest {
 
-    private final BackupService service = new BackupService();
+    private final BackupSwitch backupSwitch = new BackupSwitch(true);
+    private final BackupService service = new BackupService(backupSwitch);
 
     @TempDir
     Path temp;
@@ -152,6 +153,28 @@ class BackupServiceTest {
         service.backup(source, destination);
 
         assertThat(destination.resolve("old.txt")).hasContent("gammal");
+    }
+
+    @Test
+    void refusesToBackUpWhenBackupIsDisabled() throws IOException {
+        TestFiles.write(source.resolve("a.txt"), "alpha");
+        backupSwitch.disable();
+
+        assertThatThrownBy(() -> service.backup(source, destination))
+                .isInstanceOf(BackupDisabledException.class)
+                .hasMessageContaining("avstängd");
+        assertThat(destination).doesNotExist();
+    }
+
+    @Test
+    void backsUpAgainWhenBackupIsEnabledAgain() throws IOException {
+        TestFiles.write(source.resolve("a.txt"), "alpha");
+        backupSwitch.disable();
+        backupSwitch.enable();
+
+        BackupResult result = service.backup(source, destination);
+
+        assertThat(result.copied()).isEqualTo(1);
     }
 
     @Test

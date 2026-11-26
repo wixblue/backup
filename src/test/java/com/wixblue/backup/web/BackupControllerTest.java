@@ -5,10 +5,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+
 import com.wixblue.backup.TestFiles;
+import com.wixblue.backup.service.BackupSwitch;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,8 +33,17 @@ class BackupControllerTest {
     @Autowired
     ObjectMapper objectMapper;
 
+    @Autowired
+    BackupSwitch backupSwitch;
+
     @TempDir
     Path temp;
+
+    /** Brytaren är delad mellan testerna i samma Spring-kontext, så den återställs efter varje test. */
+    @AfterEach
+    void enableBackup() {
+        backupSwitch.enable();
+    }
 
     @Test
     void backupEndpointCopiesFilesAndReportsResult() throws Exception {
@@ -112,6 +126,61 @@ class BackupControllerTest {
                 .andExpect(jsonPath("$.notBackedUp").value(1))
                 .andExpect(jsonPath("$.backupUpToDate").value(false))
                 .andExpect(jsonPath("$.entries[0].status").value("DIFFERENT"));
+    }
+
+    @Test
+    void backupIsEnabledByDefault() throws Exception {
+        mockMvc.perform(get("/api/backup/enabled"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(true));
+    }
+
+    @Test
+    void backupCanBeDisabledAndEnabledAgain() throws Exception {
+        mockMvc.perform(put("/api/backup/enabled")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(false));
+        mockMvc.perform(get("/api/backup/enabled"))
+                .andExpect(jsonPath("$.enabled").value(false));
+
+        mockMvc.perform(put("/api/backup/enabled")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(true));
+    }
+
+    @Test
+    void backupGivesConflictWhileDisabledButCompareStillWorks() throws Exception {
+        Path source = Files.createDirectory(temp.resolve("source"));
+        Path destination = Files.createDirectory(temp.resolve("backup"));
+        TestFiles.write(source.resolve("a.txt"), "alpha");
+        backupSwitch.disable();
+
+        mockMvc.perform(post("/api/backup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("source", source, "destination", destination)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Backup är avstängd. Slå på den innan du kör en backup."));
+        assertThat(destination.resolve("a.txt")).doesNotExist();
+
+        mockMvc.perform(post("/api/compare")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("source", source, "backup", destination)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notBackedUp").value(1));
+    }
+
+    @Test
+    void missingEnabledFieldGivesBadRequestAndKeepsBackupOn() throws Exception {
+        mockMvc.perform(put("/api/backup/enabled")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
+        assertThat(backupSwitch.isEnabled()).isTrue();
     }
 
     @Test

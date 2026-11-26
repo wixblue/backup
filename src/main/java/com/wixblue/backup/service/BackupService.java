@@ -29,12 +29,22 @@ import org.springframework.stereotype.Service;
 @Service
 public class BackupService {
 
+    private final BackupSwitch backupSwitch;
+
+    public BackupService(BackupSwitch backupSwitch) {
+        this.backupSwitch = backupSwitch;
+    }
+
     /** Lägger bara till filer som saknas i backupen. */
     public BackupResult backup(Path source, Path destination) {
         return backup(source, destination, BackupMode.ADD_MISSING);
     }
 
+    /** @throws BackupDisabledException om backup är avstängd */
     public BackupResult backup(Path source, Path destination, BackupMode mode) {
+        if (!backupSwitch.isEnabled()) {
+            throw new BackupDisabledException();
+        }
         try {
             Path sourceDir = FileSupport.requireDirectory(source, "Källmappen");
             Path destinationDir = FileSupport.resolveReal(destination);

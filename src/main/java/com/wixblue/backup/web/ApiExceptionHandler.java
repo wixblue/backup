@@ -1,6 +1,7 @@
 package com.wixblue.backup.web;
 
 import com.wixblue.backup.project.ProjectNotFoundException;
+import com.wixblue.backup.service.BackupDisabledException;
 import java.io.UncheckedIOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -20,6 +21,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ProjectNotFoundException.class)
     public ProblemDetail handleProjectNotFound(ProjectNotFoundException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    /** Backup är avstängd. */
+    @ExceptionHandler(BackupDisabledException.class)
+    public ProblemDetail handleBackupDisabled(BackupDisabledException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
     /** Oväntade fel vid filåtkomst. */
