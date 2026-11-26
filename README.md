@@ -81,6 +81,22 @@ curl -X POST http://127.0.0.1:8080/api/projects \
 
 Backupmappen får inte ligga i bildmappen. Mapparna behöver inte finnas när projektet sparas, de kontrolleras först när backup eller jämförelse körs.
 
+### Döp om bilder
+
+Döper om bilderna direkt i en mapp till `YYYY-MM-DD_HH-MM_mappnamn.ext`, till exempel `2024-07-04_14-32_Semester.jpg` för en bild i mappen `Semester`.
+
+```
+curl -X POST http://127.0.0.1:8080/api/rename \
+  -H "Content-Type: application/json" \
+  -d '{"directory": "/sökväg/till/Semester", "dryRun": true}'
+```
+
+- `dryRun` är `true` om fältet utelämnas: du får se vad som skulle hända (`PLANNED`) utan att något ändras. Skicka `"dryRun": false` för att döpa om på riktigt (`RENAMED`).
+- Tidpunkten är filens senast ändrade tid, inte när fotot togs. En kopierad eller nedladdad bild kan därför få ett senare datum än själva fotot.
+- Skulle två bilder få exakt samma namn, alltså samma minut och samma filändelse, får de efterföljande ett löpnummer: `..._Semester_2.jpg`, `..._Semester_3.jpg`. Äldst först.
+- Bilder som redan har rätt namn hoppas över, så en andra körning ändrar ingenting.
+- Filer som inte är bilder (jpg, jpeg, png, gif, heic, tif, tiff, webp) och underkataloger berörs inte. Befintliga filer skrivs aldrig över.
+
 ## Arbetssätt
 
 - Ingen kod pushas direkt till `main`. Allt går via pull requests.
